@@ -1,4 +1,6 @@
 import streamlit as st
+import pandas as pd
+from docx import Document
 from startup_advisor import StartupAdvisor
 from growth_strategies import GrowthStrategist
 from coaching_system import StartupCoach
@@ -11,6 +13,7 @@ class StartupMentorSystem:
         self.strategist = GrowthStrategist()
         self.coach = StartupCoach()
         self.doc_processor = DocumentProcessor()
+        st.set_page_config(page_title="创业指导系统", layout="wide")
 
     def start_consultation(self, startup_info):
         needs_analysis = self.advisor.analyze_needs(startup_info)
@@ -27,96 +30,91 @@ class StartupMentorSystem:
             "指导记录": coaching_session
         }
 
-def main():
-    st.set_page_config(page_title="创业指导系统", layout="wide")
-    
-    st.title("创业指导系统")
-    st.write("基于一堂创业模型的智能分析系统")
-    
-    # 侧边栏
-    with st.sidebar:
-        st.header("关于系统")
-        st.write("""
-        本系统使用一堂创业模型进行分析，包括：
-        1. 需求分析
-        2. 解决方案
-        3. 商业模式
-        4. 增长策略
-        5. 竞争壁垒
-        """)
-    
-    # 主界面
-    tabs = st.tabs(["项目信息", "分析结果", "历史记录"])
-    
-    # 项目信息标签页
-    with tabs[0]:
-        with st.form("project_info"):
-            col1, col2 = st.columns(2)
+    def run(self):
+        st.title("创业指导系统")
+        
+        # 侧边栏信息
+        with st.sidebar:
+            st.header("关于系统")
+            st.write("""
+            本系统使用一堆创业模型进行分析，包括：
+            1. 需求分析
+            2. 解决方案
+            3. 商业模式
+            4. 增长策略
+            5. 竞争壁垒
+            """)
+        
+        # 主要标签页
+        tab1, tab2, tab3 = st.tabs(["项目信息", "分析结果", "历史记录"])
+        
+        with tab1:
+            col1, col2 = st.columns([2,1])
             
             with col1:
+                # 手动输入表单
+                st.subheader("项目基本信息")
                 project_name = st.text_input("项目名称")
+                project_stage = st.selectbox("项目阶段", ["概念阶段", "产品研发", "市场验证", "规模化"])
+                funding_status = st.selectbox("融资情况", ["未融资", "天使轮", "A轮", "B轮及以上"])
                 industry = st.text_input("行业领域")
-                target_customers = st.text_input("目标客户")
+                target_users = st.text_input("目标客户")
+                core_product = st.text_area("核心产品/服务描述")
+                current_challenges = st.text_area("当前进展和面临的主要问题")
             
             with col2:
-                business_stage = st.selectbox(
-                    "项目阶段",
-                    ["概念阶段", "产品研发", "市场验证", "规模化", "成熟运营"]
+                # 文件上传部分
+                st.subheader("项目文件上传")
+                uploaded_file = st.file_uploader(
+                    "上传项目相关文件（支持 PDF、DOCX、TXT）",
+                    type=["pdf", "docx", "txt"],
+                    help="上传项目计划书、商业计划书等相关文件，系统将自动分析"
                 )
-                funding_status = st.selectbox(
-                    "融资情况",
-                    ["未融资", "天使轮", "Pre-A轮", "A轮", "B轮及以上"]
-                )
-            
-            core_product = st.text_area("核心产品/服务描述")
-            current_status = st.text_area("当前进展和面临的主要问题")
-            
-            submitted = st.form_submit_button("开始分析")
-    
-    # 分析结果标签页
-    with tabs[1]:
-        if submitted:
-            with st.spinner("正在分析中..."):
-                mentor_system = StartupMentorSystem()
                 
-                analysis = mentor_system.start_consultation({
-                    "项目名称": project_name,
-                    "行业领域": industry,
-                    "目标客户": target_customers,
-                    "项目阶段": business_stage,
-                    "融资情况": funding_status,
-                    "核心产品": core_product,
-                    "当前进展": current_status
-                })
-                
-                # 显示分析结果
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.subheader("需求分析")
-                    st.write(analysis["需求分析"])
+                if uploaded_file is not None:
+                    st.success(f"文件 {uploaded_file.name} 上传成功！")
                     
-                    st.subheader("解决方案")
-                    st.write(analysis["解决方案"])
-                
-                with col2:
-                    st.subheader("商业模式")
-                    st.write(analysis["商业模式"])
+                    # 读取文件内容
+                    if uploaded_file.type == "application/pdf":
+                        st.info("PDF文件已接收，系统将进行分析")
+                        # TODO: 添加PDF处理逻辑
+                    elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+                        doc = Document(uploaded_file)
+                        text_content = "\n".join([paragraph.text for paragraph in doc.paragraphs])
+                        st.info("Word文档已接收，系统将进行分析")
+                    else:  # txt文件
+                        text_content = uploaded_file.getvalue().decode("utf-8")
+                        st.info("文本文件已接收，系统将进行分析")
+            
+            # 分析按钮
+            if st.button("开始分析", type="primary"):
+                with st.spinner("正在分析中..."):
+                    # 收集所有输入信息
+                    project_info = {
+                        "项目名称": project_name,
+                        "项目阶段": project_stage,
+                        "融资情况": funding_status,
+                        "行业领域": industry,
+                        "目标客户": target_users,
+                        "核心产品描述": core_product,
+                        "当前挑战": current_challenges
+                    }
                     
-                    st.subheader("增长策略")
-                    st.write(analysis["增长计划"])
-                
-                # 生成报告下载按钮
-                st.download_button(
-                    "下载完整分析报告",
-                    data=io.BytesIO(b"Report content").getvalue(),
-                    file_name=f"{project_name}-创业分析报告.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                )
-    
-    # 历史记录标签页
-    with tabs[2]:
-        st.info("即将推出历史记录功能...")
+                    # 如果有上传文件，添加文件内容到分析
+                    if uploaded_file is not None:
+                        project_info["上传文件"] = uploaded_file.name
+                        # TODO: 添加文件内容处理逻辑
+                    
+                    # 切换到分析结果标签
+                    tab2.write("## 分析结果")
+                    # TODO: 添加分析逻辑
+                    
+        with tab2:
+            st.info('请在"项目信息"标签页填写信息并点击"开始分析"')
+            
+        with tab3:
+            st.info("历史记录功能开发中...")
 
 if __name__ == "__main__":
-    main() 
+    system = StartupMentorSystem()
+    system.run() 
